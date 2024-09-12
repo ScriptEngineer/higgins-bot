@@ -4,7 +4,8 @@
   "description": "Simple bot that regularly checks for the availability of atomic arbitrage using the Ekubo API and executes it",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node index.ts"
+    "start": "ts-node index.ts",
+    "deploy-account": "ts-node deploy-account.ts"
   },
   "author": "Moody Salem",
   "license": "GPL-3.0-or-later",
