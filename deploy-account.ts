@@ -26,6 +26,13 @@ console.log('publicKey=', starkKeyPub);
 
 
 const OZaccountClassHash = '0x061dac032f228abef9c6626f995015233097ae253a7f72d68552db02f2971b8f';
+
+/*
+RPC_PROVIDER.getClass("0x061dac032f228abef9c6626f995015233097ae253a7f72d68552db02f2971b8f", "latest").then(cls => {
+  console.log(cls);
+});
+*/
+
 const OZaccountConstructorCallData = CallData.compile({ publicKey: starkKeyPub });
 const OZcontractAddress = hash.calculateContractAddressFromHash(
   starkKeyPub,
@@ -36,37 +43,27 @@ const OZcontractAddress = hash.calculateContractAddressFromHash(
 
 console.log('Precalculated account address=', OZcontractAddress);
 
-async function validateContract() {
+async function deployAndValidateAccount() {
+  // Deploy the OpenZeppelin Account first
+  const ACCOUNT = new Account(RPC_PROVIDER, OZcontractAddress, PRIVATE_KEY);
+
   try {
-    const contract = await RPC_PROVIDER.getClassAt(OZcontractAddress);
-    console.log('Contract Class Found:', contract);
+    const { transaction_hash, contract_address } = await ACCOUNT.deployAccount({
+      classHash: OZaccountClassHash,
+      constructorCalldata: OZaccountConstructorCallData,
+      addressSalt: starkKeyPub,
+    });
+
+    // Wait for the transaction to be confirmed
+    await RPC_PROVIDER.waitForTransaction(transaction_hash);
+    console.log("✅ New OpenZeppelin account created.\n   address =", contract_address);
+
+    // Now validate the contract class at the deployed address
+    const contract = await RPC_PROVIDER.getClassAt(contract_address);
+    console.log("Contract Class Found:", contract);
   } catch (error) {
-    console.error('Address validation failed:', (error as Error).message);
+    console.error("❌ Error deploying account or validating contract:", error);
   }
 }
 
-validateContract();
-
-/*
-const ACCOUNT = new Account(RPC_PROVIDER, OZcontractAddress, PRIVATE_KEY);
-
-async function deployAccount() {
-
-  try {
-      const { transaction_hash, contract_address } = await ACCOUNT.deployAccount({
-        classHash: OZaccountClassHash,
-        constructorCalldata: OZaccountConstructorCallData,
-        addressSalt: starkKeyPub,
-      });    
-      await RPC_PROVIDER.waitForTransaction(transaction_hash);
-      console.log('✅ New OpenZeppelin account created.\n   address =', contract_address);
-  } catch (error) {
-    console.error('❌ Error deploying account:', error);
-    return;
-  }
-
-}
-
-deployAccount();
-
-*/
+deployAndValidateAccount();
