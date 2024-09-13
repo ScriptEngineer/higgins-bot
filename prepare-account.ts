@@ -1,11 +1,17 @@
 import "dotenv/config";
 import { Account, Call, Contract, num, constants, ec, json, stark, RpcProvider, hash, CallData } from 'starknet';
+//import ROUTER_ABI from "./router-abi.json";
 
+const JSON_RPC_URL = process.env.JSON_RPC_URL;
+const RPC_PROVIDER = new RpcProvider({
+  nodeUrl: JSON_RPC_URL,
+});
 
-const PRIVATE_KEY = process.env.ACCOUNT_PRIVATE_KEY as string;
-if (!PRIVATE_KEY) {
-  throw new Error("ACCOUNT_PRIVATE_KEY is not defined in the environment variables");
-}
+RPC_PROVIDER.getSpecVersion().then(specVersion => {
+  console.log(specVersion);
+});
+
+const PRIVATE_KEY = ec.starkCurve.utils.randomPrivateKey();
 console.log('New OZ account:\nprivateKey=', PRIVATE_KEY);
 const starkKeyPub = ec.starkCurve.getStarkKey(PRIVATE_KEY);
 console.log('publicKey=', starkKeyPub);
@@ -20,4 +26,4 @@ const OZcontractAddress = hash.calculateContractAddressFromHash(
 );
 
 console.log('Precalculated account address=', OZcontractAddress);
-
+process.env.PREPARED_ADDRESS = OZcontractAddress;

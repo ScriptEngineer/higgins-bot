@@ -5,10 +5,11 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node index.ts",
+    "prepare-account": "ts-node prepare-account.ts",
     "deploy-account": "ts-node deploy-account.ts"
   },
-  "author": "Moody Salem",
-  "license": "GPL-3.0-or-later",
+  "author": "Gerardo GonzalezInzunza",
+  "license": "Contact For Details",
   "devDependencies": {
     "@types/node": "^20.12.4",
     "ts-node": "^10.9.2",
