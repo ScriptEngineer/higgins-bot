@@ -11,28 +11,12 @@ RPC_PROVIDER.getSpecVersion().then(specVersion => {
   console.log(specVersion);
 });
 
-const PRIVATE_KEY = process.env.ACCOUNT_PRIVATE_KEY as string;
-if (!PRIVATE_KEY) {
-  throw new Error("ACCOUNT_PRIVATE_KEY is not defined in the environment variables");
-}
-
-
-/*
-const PRIVATE_KEY = stark.randomAddress();
-*/
+const PRIVATE_KEY = ec.starkCurve.utils.randomPrivateKey();
 console.log('New OZ account:\nprivateKey=', PRIVATE_KEY);
 const starkKeyPub = ec.starkCurve.getStarkKey(PRIVATE_KEY);
 console.log('publicKey=', starkKeyPub);
 
-
 const OZaccountClassHash = '0x061dac032f228abef9c6626f995015233097ae253a7f72d68552db02f2971b8f';
-
-/*
-RPC_PROVIDER.getClass("0x061dac032f228abef9c6626f995015233097ae253a7f72d68552db02f2971b8f", "latest").then(cls => {
-  console.log(cls);
-});
-*/
-
 const OZaccountConstructorCallData = CallData.compile({ publicKey: starkKeyPub });
 const OZcontractAddress = hash.calculateContractAddressFromHash(
   starkKeyPub,
