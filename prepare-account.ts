@@ -1,20 +1,32 @@
+import fs from 'fs';
+import path from 'path';
 import "dotenv/config";
 import { Account, Call, Contract, num, constants, ec, json, stark, RpcProvider, hash, CallData } from 'starknet';
-//import ROUTER_ABI from "./router-abi.json";
+
+require('dotenv').config();
 
 const JSON_RPC_URL = process.env.JSON_RPC_URL;
 const RPC_PROVIDER = new RpcProvider({
   nodeUrl: JSON_RPC_URL,
 });
 
-RPC_PROVIDER.getSpecVersion().then(specVersion => {
-  console.log(specVersion);
+const outputFilePath = path.resolve(__dirname, 'account_details.txt');
+const writeStream = fs.createWriteStream(outputFilePath);
+
+// Function to write to the file
+const writeToFile = (data: string): void => {
+  writeStream.write(`\n${data}\n`);
+};
+
+RPC_PROVIDER.getSpecVersion().then((specVersion: string) => {
+  writeToFile(`Spec Version:\n${specVersion}`);
 });
 
 const PRIVATE_KEY = ec.starkCurve.utils.randomPrivateKey();
-console.log('New OZ account:\nprivateKey=', PRIVATE_KEY);
+const privateKeyHex = '0x' + Buffer.from(PRIVATE_KEY).toString('hex');
+writeToFile(`Private Key\n${privateKeyHex}`);
 const starkKeyPub = ec.starkCurve.getStarkKey(PRIVATE_KEY);
-console.log('publicKey=', starkKeyPub);
+writeToFile(`Public Key\n${starkKeyPub}`);
 
 const OZaccountClassHash = '0x061dac032f228abef9c6626f995015233097ae253a7f72d68552db02f2971b8f';
 const OZaccountConstructorCallData = CallData.compile({ publicKey: starkKeyPub });
@@ -25,5 +37,7 @@ const OZcontractAddress = hash.calculateContractAddressFromHash(
   0
 );
 
-console.log('Precalculated account address=', OZcontractAddress);
-process.env.PREPARED_ADDRESS = OZcontractAddress;
+writeToFile(`Precalculated account address\n${OZcontractAddress}`);
+writeStream.end(() => {
+  console.log('Account ready for funding. Check account_details.txt for details.');
+});

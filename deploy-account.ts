@@ -7,35 +7,28 @@ const RPC_PROVIDER = new RpcProvider({
   nodeUrl: JSON_RPC_URL,
 });
 
-RPC_PROVIDER.getSpecVersion().then(specVersion => {
-  console.log(specVersion);
-});
-
-const PRIVATE_KEY = ec.starkCurve.utils.randomPrivateKey();
-console.log('New OZ account:\nprivateKey=', PRIVATE_KEY);
-const starkKeyPub = ec.starkCurve.getStarkKey(PRIVATE_KEY);
-console.log('publicKey=', starkKeyPub);
-
-const OZaccountClassHash = '0x061dac032f228abef9c6626f995015233097ae253a7f72d68552db02f2971b8f';
-const OZaccountConstructorCallData = CallData.compile({ publicKey: starkKeyPub });
-const OZcontractAddress = hash.calculateContractAddressFromHash(
-  starkKeyPub,
-  OZaccountClassHash,
-  OZaccountConstructorCallData,
-  0
-);
-
-console.log('Precalculated account address=', OZcontractAddress);
+const ContractAddress = process.env.ACCOUNT_ADDRESS!;
+const ContractPrivateKey = process.env.ACCOUNT_PRIVATE_KEY!;
+const ContractPublicKey = process.env.ACCOUNT_PUBLIC_KEY!;
 
 async function deployAndValidateAccount() {
   // Deploy the OpenZeppelin Account first
-  const ACCOUNT = new Account(RPC_PROVIDER, OZcontractAddress, PRIVATE_KEY);
+  const ACCOUNT = new Account(RPC_PROVIDER, ContractAddress, ContractPrivateKey);
 
   try {
+
+    const OZaccountClassHash = '0x061dac032f228abef9c6626f995015233097ae253a7f72d68552db02f2971b8f';
+    const OZaccountConstructorCallData = CallData.compile({ publicKey: ContractPublicKey });
+    const OZcontractAddress = hash.calculateContractAddressFromHash(
+      ContractPublicKey,
+      OZaccountClassHash,
+      OZaccountConstructorCallData,
+      0
+    );
     const { transaction_hash, contract_address } = await ACCOUNT.deployAccount({
       classHash: OZaccountClassHash,
       constructorCalldata: OZaccountConstructorCallData,
-      addressSalt: starkKeyPub,
+      addressSalt: ContractPublicKey,
     });
 
     // Wait for the transaction to be confirmed
