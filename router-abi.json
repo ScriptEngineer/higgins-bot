@@ -249,7 +249,7 @@
       },
       {
         "type": "function",
-        "name": "quote",
+        "name": "quote_multi_multihop_swap",
         "inputs": [
           {
             "name": "swaps",
@@ -261,7 +261,47 @@
             "type": "core::array::Array::<core::array::Array::<ekubo::types::delta::Delta>>"
           }
         ],
-        "state_mutability": "external"
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "quote_multihop_swap",
+        "inputs": [
+          {
+            "name": "route",
+            "type": "core::array::Array::<ekubo::router::RouteNode>"
+          },
+          {
+            "name": "token_amount",
+            "type": "ekubo::router::TokenAmount"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::array::Array::<ekubo::types::delta::Delta>"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "quote_swap",
+        "inputs": [
+          {
+            "name": "node",
+            "type": "ekubo::router::RouteNode"
+          },
+          {
+            "name": "token_amount",
+            "type": "ekubo::router::TokenAmount"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "ekubo::types::delta::Delta"
+          }
+        ],
+        "state_mutability": "view"
       },
       {
         "type": "function",
