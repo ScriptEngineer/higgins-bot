@@ -204,7 +204,7 @@ console.log('Starting with config', {
         const cost = await ACCOUNT.estimateFee(topArbitrageResults[0].calls);
         console.log('Estimated fee:', cost.suggestedMaxFee);
 
-        /*
+        
         const { transaction_hash } = await ACCOUNT.execute(
           topArbitrageResults[0].calls,
           { maxFee: cost.suggestedMaxFee * 2n }
@@ -220,7 +220,6 @@ console.log('Starting with config', {
         });
 
         console.log('Arbitrage receipt', receipt);
-        */
 
       } catch (error) {
         console.error('Failed to send arbitrage transaction', error);

@@ -8,7 +8,8 @@
     "test": "node simple.js",
     "get-balance": "ts-node get-balance.ts",
     "prepare-account": "ts-node prepare-account.ts",
-    "deploy-account": "ts-node deploy-account.ts"
+    "deploy-account": "ts-node deploy-account.ts",
+    "withdraw": "ts-node withdraw.ts"
   },
   "author": "Gerardo GonzalezInzunza",
   "license": "Contact For Details",
