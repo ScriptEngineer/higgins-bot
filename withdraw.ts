@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { Account, Contract, RpcProvider } from 'starknet';
+import { Account, Contract, RpcProvider, num } from 'starknet';
 import ROUTER_ABI from "./router-abi.json";
 
 const JSON_RPC_URL = process.env.JSON_RPC_URL;
@@ -38,25 +38,34 @@ async function fetchTokenBalance(tokenAddress: string, accountAddress: string) {
   }
 }
 
-// Function to call 'clear_minimum_to_recipient' to transfer tokens
 async function transferFunds() {
   try {
-    // Call the 'clear_minimum_to_recipient' function to transfer funds
-    const response = await ACCOUNT.execute({
+    // Manually construct the transfer call
+    const transferCall = {
       contractAddress: TOKEN_TO_ARBITRAGE,
-      entrypoint: "clear_minimum_to_recipient",
+      entrypoint: 'transfer',
       calldata: [
-        TOKEN_TO_ARBITRAGE,     
-        WITHDRAWAL_AMOUNT,         
-        WALLET_ADDRESS       
-      ]
+        WALLET_ADDRESS,         // Recipient address
+        num.toHex(WITHDRAWAL_AMOUNT), // Amount to transfer
+        '0x0',                  // Optional parameter if required
+      ],
+    };
+
+    // Estimate the transaction fee
+    const cost = await ACCOUNT.estimateFee([transferCall]);
+    console.log('Estimated transfer fee:', cost.suggestedMaxFee);
+
+    // Execute the transaction
+    const { transaction_hash } = await ACCOUNT.execute([transferCall], {
+      maxFee: cost.suggestedMaxFee * 2n,
     });
 
-    console.log(`Transfer initiated. Transaction hash: ${response.transaction_hash}`);
+    console.log('Transfer successful, transaction hash:', transaction_hash);
   } catch (error) {
     console.error("Failed to transfer funds:", error);
   }
 }
+
 
 async function outputTokenBalancesAndTransfer() {
   const contractBalance = await fetchTokenBalance(TOKEN_TO_ARBITRAGE, ACCOUNT.address);
