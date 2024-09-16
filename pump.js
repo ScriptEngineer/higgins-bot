@@ -133,8 +133,6 @@ console.log('Starting with config', {
               '0x0',
             ];
 
-            console.log('Calldata:', calldata); // Output calldata array
-
             return {
               ...result,
               calls: [
@@ -203,8 +201,7 @@ console.log('Starting with config', {
       try {
         const cost = await ACCOUNT.estimateFee(topArbitrageResults[0].calls);
         console.log('Estimated fee:', cost.suggestedMaxFee);
-
-        
+ 
         const { transaction_hash } = await ACCOUNT.execute(
           topArbitrageResults[0].calls,
           { maxFee: cost.suggestedMaxFee * 2n }
