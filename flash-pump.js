@@ -1,7 +1,8 @@
 require('dotenv/config');
 const { Account, Contract, num, RpcProvider } = require('starknet');
 const ROUTER_ABI = require('./router-abi.json');
-const fetch = require('node-fetch'); // If you're using node-fetch
+const FLASH_LOAN_ROUTER_ABI = require('./flash_loan_router_abi.json'); // New ABI for the flash loan router
+const fetch = require('node-fetch');
 const EKUBO_API_QUOTE_URL = process.env.EKUBO_API_QUOTE_URL;
 const TOKEN_TO_ARBITRAGE = process.env.TOKEN_TO_ARBITRAGE;
 const MAX_HOPS = Math.max(3, Number(process.env.MAX_HOPS));
@@ -32,6 +33,12 @@ const ACCOUNT = new Account(
 const ROUTER_CONTRACT = new Contract(
   ROUTER_ABI,
   process.env.ROUTER_ADDRESS,
+  RPC_PROVIDER
+);
+
+const FLASH_LOAN_ROUTER_CONTRACT = new Contract(
+  FLASH_LOAN_ROUTER_ABI,
+  process.env.FLASH_LOAN_ROUTER_ADDRESS,
   RPC_PROVIDER
 );
 
@@ -90,16 +97,8 @@ console.log('Starting with config', {
           throw new Error('unexpected number of splits');
         }
 
-        const transferCall = {
-          contractAddress: TOKEN_TO_ARBITRAGE,
-          entrypoint: 'transfer',
-          calldata: [ROUTER_CONTRACT.address, num.toHex(amount), '0x0'],
-        };
-
-        const clearProfitsCall = ROUTER_CONTRACT.populate('clear_minimum', [
-          { contract_address: TOKEN_TO_ARBITRAGE },
-          amount,
-        ]);
+        // Build calldata for the flash loan function
+        let calls = [];
 
         if (splits.length === 1) {
           const split = splits[0];
@@ -132,65 +131,64 @@ console.log('Starting with config', {
               '0x0',
             ];
 
-            return {
-              ...result,
-              calls: [
-                transferCall,
-                {
-                  contractAddress: ROUTER_CONTRACT.address,
-                  entrypoint: 'multihop_swap',
-                  calldata,
-                },
-                clearProfitsCall,
+            calls.push({
+              contractAddress: FLASH_LOAN_ROUTER_CONTRACT.address,
+              entrypoint: 'flash_loan_multihop_swap',
+              calldata: [
+                TOKEN_TO_ARBITRAGE,
+                num.toHex(amount),
+                calldata.length.toString(),
+                ...calldata,
               ],
-            };
+            });
           }
-        }
+        } else {
+          const calldata = [
+            num.toHex(splits.length),
+            ...splits.reduce((memo, split) => {
+              return memo.concat([
+                num.toHex(split.route.length),
+                ...split.route.reduce(
+                  (memo, routeNode) => {
+                    const isToken1 = BigInt(memo.token) === BigInt(routeNode.pool_key.token1);
+                    return {
+                      token: isToken1 ? routeNode.pool_key.token0 : routeNode.pool_key.token1,
+                      encoded: memo.encoded.concat([
+                        routeNode.pool_key.token0,
+                        routeNode.pool_key.token1,
+                        routeNode.pool_key.fee,
+                        num.toHex(routeNode.pool_key.tick_spacing),
+                        routeNode.pool_key.extension,
+                        num.toHex(BigInt(routeNode.sqrt_ratio_limit) % 2n ** 128n),
+                        num.toHex(BigInt(routeNode.sqrt_ratio_limit) >> 128n),
+                        routeNode.skip_ahead,
+                      ]),
+                    };
+                  },
+                  { token: TOKEN_TO_ARBITRAGE, encoded: [] }
+                ).encoded,
+                TOKEN_TO_ARBITRAGE,
+                num.toHex(BigInt(split.specifiedAmount)),
+                '0x0',
+              ]);
+            }, []),
+          ];
 
-        const calldata = [
-          num.toHex(splits.length),
-          ...splits.reduce((memo, split) => {
-            return memo.concat([
-              num.toHex(split.route.length),
-              ...split.route.reduce(
-                (memo, routeNode) => {
-                  const isToken1 = BigInt(memo.token) === BigInt(routeNode.pool_key.token1);
-                  return {
-                    token: isToken1 ? routeNode.pool_key.token0 : routeNode.pool_key.token1,
-                    encoded: memo.encoded.concat([
-                      routeNode.pool_key.token0,
-                      routeNode.pool_key.token1,
-                      routeNode.pool_key.fee,
-                      num.toHex(routeNode.pool_key.tick_spacing),
-                      routeNode.pool_key.extension,
-                      num.toHex(BigInt(routeNode.sqrt_ratio_limit) % 2n ** 128n),
-                      num.toHex(BigInt(routeNode.sqrt_ratio_limit) >> 128n),
-                      routeNode.skip_ahead,
-                    ]),
-                  };
-                },
-                { token: TOKEN_TO_ARBITRAGE, encoded: [] }
-              ).encoded,
+          calls.push({
+            contractAddress: FLASH_LOAN_ROUTER_CONTRACT.address,
+            entrypoint: 'flash_loan_multi_multihop_swap',
+            calldata: [
               TOKEN_TO_ARBITRAGE,
-              num.toHex(BigInt(split.specifiedAmount)),
-              '0x0',
-            ]);
-          }, []),
-        ];
-
-        console.log('Calldata:', calldata); // Output calldata array
+              num.toHex(amount),
+              calldata.length.toString(),
+              ...calldata,
+            ],
+          });
+        }
 
         return {
           ...result,
-          calls: [
-            transferCall,
-            {
-              contractAddress: ROUTER_CONTRACT.address,
-              entrypoint: 'multi_multihop_swap',
-              calldata,
-            },
-            clearProfitsCall,
-          ],
+          calls,
         };
       });
 
@@ -200,7 +198,7 @@ console.log('Starting with config', {
       try {
         const cost = await ACCOUNT.estimateFee(topArbitrageResults[0].calls);
         console.log('Estimated fee:', cost.suggestedMaxFee);
- 
+
         const { transaction_hash } = await ACCOUNT.execute(
           topArbitrageResults[0].calls,
           { maxFee: cost.suggestedMaxFee * 2n }

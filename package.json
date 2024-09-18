@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "pump": "node pump.js",
+    "maximus": "node pump_max.js",
     "test": "node simple.js",
     "get-balance": "ts-node get-balance.ts",
     "prepare-account": "ts-node prepare-account.ts",
